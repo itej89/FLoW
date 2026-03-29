@@ -172,5 +172,4 @@ python3 ./tools/uploader.py ./test/example_programs/uart_echo/uart_echo.hex -p /
 **License**
 -----------
 
-This repository is licensed under the [GNU GENERAL PUBLIC LICENSE](https://github.com/itej89/ani_b_mech_designs/blob/main/LICENSE). See 
-`LICENSE.md` for details.
+This repository is licensed under the [GNU GENERAL PUBLIC LICENSE]
