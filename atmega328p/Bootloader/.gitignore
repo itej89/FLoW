@@ -1,0 +1,40 @@
+# AVR Bootloader Project .gitignore
+
+# Build artifacts
+build/
+*.elf
+*.hex
+*.eep
+*.o
+*.d
+*.map
+*.lst
+*.sym
+*.lss
+
+# AVRDUDE temporary files
+*.tmp
+
+# IDE and editor files
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+*.log
+
+# Backup files
+*.bak
+*.orig
+
+# PlatformIO (if used)
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# Temporary directories
+tmp/
+temp/
