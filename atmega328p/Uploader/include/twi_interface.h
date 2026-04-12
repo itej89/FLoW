@@ -16,4 +16,5 @@ extern uint8_t twi_start_write(uint8_t address7);
 extern uint8_t twi_start_read(uint8_t address7);
 extern void twi_stop(void);
 extern uint8_t twi_write_byte(uint8_t b);
+extern uint8_t twi_read_byte_ack(uint8_t *out);
 extern uint8_t twi_read_byte_nack(uint8_t *out);

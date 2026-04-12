@@ -35,7 +35,7 @@ def parse_args():
     p.add_argument("-b", "--baud", type=int, default=DEFAULT_BAUD, help=f"Serial baud rate (default: {DEFAULT_BAUD})")
     p.add_argument("--page-size", type=int, default=FLASH_PAGE_SIZE, help="Flash page size in bytes")
     p.add_argument("--timeout", type=float, default=2.0, help="Serial timeout in seconds")
-    p.add_argument("--retries", type=int, default=3, help="Retries per command")
+    p.add_argument("--retries", type=int, default=1, help="Retries per command")
     p.add_argument("--inter-frame-delay", type=float, default=0.01, help="Delay after each UART frame")
     return p.parse_args()
 
@@ -129,7 +129,16 @@ def xor_checksum(device_addr:int, cmd: int, length: int, data: bytes) -> int:
     return x & 0xFF
 
 
-def send_uart_packet(ser: serial.Serial, device_addr: int, cmd: int, data: bytes, expected_ack: int, retries: int = 3, inter_frame_delay: float = 0.01):
+def send_uart_packet(
+    ser: serial.Serial,
+    device_addr: int,
+    cmd: int,
+    data: bytes,
+    expected_ack: int = None,
+    expected_data_len: int = None,
+    retries: int = 1,
+    inter_frame_delay: float = 0.01,
+):
     if len(data) > 255:
         raise ValueError("UART payload too large")
 
@@ -152,21 +161,52 @@ def send_uart_packet(ser: serial.Serial, device_addr: int, cmd: int, data: bytes
             if hdr[0] != UART_RESP_SOF:
                 raise RuntimeError(f"bad response SOF: 0x{hdr[0]:02X}")
 
-            tail = ser.read(3)
-            if len(tail) != 3:
-                raise RuntimeError("short response")
+            if expected_data_len is None:
+                tail = ser.read(3)
+                if len(tail) != 3:
+                    raise RuntimeError("short response")
 
-            status, ack, rchk = tail
-            if ((status ^ ack) & 0xFF) != rchk:
+                status, ack, rchk = tail
+                if ((status ^ ack) & 0xFF) != rchk:
+                    raise RuntimeError("response checksum mismatch")
+
+                if status != 0x00:
+                    raise RuntimeError(f"master transport error: status=0x{status:02X}")
+
+                if expected_ack is None:
+                    raise RuntimeError("expected_ack must be provided for bootloader-style responses")
+                if ack != expected_ack:
+                    raise RuntimeError(f"unexpected bootloader ACK: got 0x{ack:02X}, expected 0x{expected_ack:02X}")
+
+                return ack
+
+            header = ser.read(2)
+            if len(header) != 2:
+                raise RuntimeError("short application response header")
+
+            status, data_len = header
+            payload = ser.read(data_len + 1)
+            if len(payload) != data_len + 1:
+                raise RuntimeError("short application response payload")
+
+            data_bytes = payload[:-1]
+            rchk = payload[-1]
+            calc_chk = status ^ data_len
+            for b in data_bytes:
+                calc_chk ^= b
+
+            if calc_chk != rchk:
                 raise RuntimeError("response checksum mismatch")
 
             if status != 0x00:
                 raise RuntimeError(f"master transport error: status=0x{status:02X}")
 
-            if ack != expected_ack:
-                raise RuntimeError(f"unexpected bootloader ACK: got 0x{ack:02X}, expected 0x{expected_ack:02X}")
+            if expected_data_len is not None and data_len != expected_data_len:
+                raise RuntimeError(
+                    f"unexpected application response length: got {data_len}, expected {expected_data_len}"
+                )
 
-            return ack
+            return data_bytes
 
         except Exception as e:
             last_err = e
@@ -175,17 +215,71 @@ def send_uart_packet(ser: serial.Serial, device_addr: int, cmd: int, data: bytes
     raise RuntimeError(str(last_err))
 
 
+def send_mode_switch(ser: serial.Serial, device_addr: int, mode: int, retries: int = 3, inter_frame_delay: float = 0.01):
+    """Switch the UART-I2C bridge to the specified mode (0=bootloader, 1=application)"""
+    send_uart_packet(
+        ser,
+        device_addr,
+        0xFF,  # Mode switch command
+        bytes([mode]),
+        0x00,  # Expect STATUS_OK
+        retries=retries,
+        inter_frame_delay=inter_frame_delay,
+    )
+
+
+def trigger_bootloader_from_application(ser: serial.Serial, device_addr: int, retries: int, inter_frame_delay: float):
+    print("Switching Bridge to application mode...", flush=True)
+    send_mode_switch(ser, device_addr, 1, retries, inter_frame_delay)
+
+    print("Change the target to bootmode...", flush=True)
+    trigger_payload = bytes([0x01, 0x00, 0x01])
+    send_uart_packet(
+        ser,
+        device_addr,
+        0x01,  # Application write operation
+        trigger_payload,
+        expected_ack=None,
+        expected_data_len=2,
+        retries=retries,
+        inter_frame_delay=inter_frame_delay,
+    )
+
+    time.sleep(0.5)
+    print("Switching Bridge back to boot mode...", flush=True)
+    send_mode_switch(ser, device_addr, 0, retries, inter_frame_delay)
+
+
 def program_device(ser: serial.Serial, device_addr, pages, retries: int, inter_frame_delay: float):
-    print("BEGIN")
+    print("Probing bootloader mode...")
+    # send_mode_switch(ser, device_addr, 0, retries, inter_frame_delay)
+
+    # try:
+    #     send_uart_packet(
+    #         ser,
+    #         device_addr,
+    #         PRG_INT_BEGIN,
+    #         b"",
+    #         PRG_INT_BEGIN_ACK,
+    #         retries=retries,
+    #         inter_frame_delay=inter_frame_delay,
+    #     )
+    #     print("Bootloader probe succeeded")
+    # except Exception as boot_err:
+    #     print(f"Bootloader probe failed: {boot_err}")
+    #     print("Attempting application-mode bootloader trigger...")
+    trigger_bootloader_from_application(ser, device_addr, retries, inter_frame_delay)
     send_uart_packet(
         ser,
         device_addr,
         PRG_INT_BEGIN,
-        b"", 
+        b"",
         PRG_INT_BEGIN_ACK,
         retries=retries,
         inter_frame_delay=inter_frame_delay,
     )
+
+    print("BEGIN")
 
     for idx, (page_start_byte_addr, page_data) in enumerate(pages, start=1):
         if page_start_byte_addr & 0x01:

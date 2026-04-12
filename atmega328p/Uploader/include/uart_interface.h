@@ -13,4 +13,5 @@
 
 extern uint8_t uart_xor(uint8_t devaddr, uint8_t cmd, uint8_t len, const uint8_t *data);
 extern void send_uart_response(uint8_t status, uint8_t ack);
+extern void send_uart_response_data(uint8_t status, const uint8_t *data, uint8_t data_len);
 extern bool read_exact(uint8_t *buf, size_t n, uint32_t timeout_ms = 2000);

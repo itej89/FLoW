@@ -10,7 +10,6 @@
 #define UBRR_VALUE ((F_CPU / (8UL * BAUD)) - 1)
 
 #define TX_BUF_SIZE 64
-#define BOOT_MAGIC 0xB007
 
 volatile uint8_t tx_buf[TX_BUF_SIZE];
 volatile uint8_t tx_head = 0;

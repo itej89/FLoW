@@ -62,6 +62,17 @@ uint8_t twi_write_byte(uint8_t b) {
   return STATUS_OK;
 }
 
+uint8_t twi_read_byte_ack(uint8_t *out) {
+  TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWEA);  // ACK after this byte
+  while (!(TWCR & (1 << TWINT))) {}
+  uint8_t st = TWSR & 0xF8;
+  if (st != TW_MR_DATA_ACK) {
+    return STATUS_I2C_SLAR;
+  }
+  *out = TWDR;
+  return STATUS_OK;
+}
+
 uint8_t twi_read_byte_nack(uint8_t *out) {
   TWCR = (1 << TWINT) | (1 << TWEN);  // NACK after one byte
   while (!(TWCR & (1 << TWINT))) {}
