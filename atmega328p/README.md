@@ -14,7 +14,7 @@ The system consists of two main components:
 - **UART to I2C Gateway**: Arduino acts as a serial-to-I2C bridge
 - **Checksummed Protocol**: XOR-based packet validation for data integrity
 - **Python Upload Utility**: Command-line tool for uploading hex files
-- **Example Programs**: Test programs like blink and UART echo included
+- **Application Development Template**: `wire_app_template` for building applications with bootloader integration
 
 ## System Architecture
 
@@ -52,6 +52,34 @@ PC ----UART----> Arduino Gateway ----I2C----> ATmega328P Bootloader
    - Use the Python uploader: `python3 ./tools/uploader.py <hex_file> -p <port> --device <address>`
 
 For detailed instructions, see the README files in each component directory.
+
+## Application Development
+
+The `wire_app_template` in `Uploader/test/example_programs/` serves as the primary template for developing applications that integrate with the bootloader system. This template demonstrates:
+
+- **I2C Communication**: Basic I2C slave functionality for application-level communication
+- **Bootloader Integration**: Seamless switching from application mode to bootloader mode
+- **PlatformIO Build System**: Ready-to-use configuration for building and uploading applications
+
+### Using the Template
+
+1. **Copy the Template**:
+   ```bash
+   cp -r Uploader/test/example_programs/wire_app_template/ my_app/
+   cd my_app/
+   ```
+
+2. **Modify the Code**:
+   - Edit `src/main.cpp` to implement your application logic
+   - Update `platformio.ini` if needed for different board configurations
+
+3. **Build and Upload**:
+   ```bash
+   platformio run
+   python3 ../Uploader/tools/uploader.py .pio/build/pro16MHzatmega328/firmware.hex -p /dev/ttyACM0 --device 0x42
+   ```
+
+The template includes example code for triggering bootloader mode from the application, allowing for over-the-air updates and firmware management.
 
 **License**
 -----------
