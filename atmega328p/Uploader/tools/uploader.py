@@ -37,6 +37,7 @@ def parse_args():
     p.add_argument("--timeout", type=float, default=2.0, help="Serial timeout in seconds")
     p.add_argument("--retries", type=int, default=1, help="Retries per command")
     p.add_argument("--inter-frame-delay", type=float, default=0.01, help="Delay after each UART frame")
+    p.add_argument("--factory", action="store_true", help="Factory mode: no application to switch from")
     return p.parse_args()
 
 
@@ -250,25 +251,11 @@ def trigger_bootloader_from_application(ser: serial.Serial, device_addr: int, re
     send_mode_switch(ser, device_addr, 0, retries, inter_frame_delay)
 
 
-def program_device(ser: serial.Serial, device_addr, pages, retries: int, inter_frame_delay: float):
-    print("Probing bootloader mode...")
-    # send_mode_switch(ser, device_addr, 0, retries, inter_frame_delay)
-
-    # try:
-    #     send_uart_packet(
-    #         ser,
-    #         device_addr,
-    #         PRG_INT_BEGIN,
-    #         b"",
-    #         PRG_INT_BEGIN_ACK,
-    #         retries=retries,
-    #         inter_frame_delay=inter_frame_delay,
-    #     )
-    #     print("Bootloader probe succeeded")
-    # except Exception as boot_err:
-    #     print(f"Bootloader probe failed: {boot_err}")
-    #     print("Attempting application-mode bootloader trigger...")
-    trigger_bootloader_from_application(ser, device_addr, retries, inter_frame_delay)
+def program_device(factory: bool ,ser: serial.Serial, device_addr, pages, retries: int, inter_frame_delay: float):
+    if factory:
+        send_mode_switch(ser, device_addr, 0, retries, inter_frame_delay)
+    else:
+        trigger_bootloader_from_application(ser, device_addr, retries, inter_frame_delay)
     send_uart_packet(
         ser,
         device_addr,
@@ -357,6 +344,7 @@ def main():
 
             device_addr = int(args.device, 16)
             program_device(
+                args.factory,
                 ser,
                 device_addr, 
                 pages,
