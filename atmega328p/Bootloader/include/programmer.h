@@ -31,13 +31,13 @@ struct PRG_FRAME {
     uint8_t Command;
     uint8_t length;
     uint8_t* data;
-} _prg_frame;
+};
 
 struct PRG_PAGE_DATA {
     uint32_t address;
     uint8_t length;
     uint8_t* data;
-} _prg_page_data;
+};
 
 
 void prg_try_flashing(void);

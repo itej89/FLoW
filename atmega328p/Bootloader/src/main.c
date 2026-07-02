@@ -18,6 +18,7 @@
 #include "i2c_driver.h"
 #include "flash_driver.h"
 #include "programmer.h"
+#include "board_specific.h"
 
 #include <avr/wdt.h>
 #include <stdint.h>
@@ -32,7 +33,7 @@
 
 
 #ifndef TWI_ADDR
-#define TWI_ADDR 0x42   /* default 7-bit slave address (change as needed) */
+#define TWI_ADDR 0x05   /* default 7-bit slave address (change as needed) */
 #endif
 
 static inline void clear_all_interrupts(void)
@@ -69,6 +70,8 @@ int main(void) {
     
     uart_init();
     i2c_init_device(TWI_ADDR);
+
+    set_board_config();
 
     uint8_t stay_in_boot = 0;
 

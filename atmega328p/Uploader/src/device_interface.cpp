@@ -104,7 +104,7 @@ uint8_t forward_frame_to_target(uint8_t devaddr, uint8_t cmd, uint8_t len, const
                 return STATUS_I2C_SLAR;
             }
             uint8_t count = Wire.requestFrom((int)devaddr, data_len + 2);
-            if (count != data_len) {
+            if (count != data_len+2) {
                 return STATUS_I2C_SLAR;
             }
             response_buf[0] = Wire.read();

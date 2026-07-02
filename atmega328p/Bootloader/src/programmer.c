@@ -10,6 +10,8 @@
 #include "uart_debug.h"
 
 enum PRG_STATES PRG_STATE = PRG_RESET;
+struct PRG_FRAME _prg_frame;
+struct PRG_PAGE_DATA _prg_page_data;
 
 void _prg_parse_frame(uint8_t* buffer) {
     _prg_frame.Command = buffer[0];
